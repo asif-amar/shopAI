@@ -1,0 +1,108 @@
+# Cursor Rules — Chrome Extension (MV3) + TypeScript + AI
+
+## Project context
+- We are building a Chrome Extension using Manifest V3 with a background service worker, content scripts, and (optionally) an options page and popup.
+- Language: TypeScript. Module bundler: Vite or Webpack (prefer Vite).
+- Primary goal: a small, secure, maintainable base that can later call AI APIs (provider-agnostic).
+
+## Tech & architecture
+- Structure:
+  /src
+    /background
+    /content
+    /ui (popup/options)
+    /lib (shared utilities)
+    /types
+  /public (static assets incl. manifest.json template)
+- Export reusable utilities from /lib with clear, typed interfaces.
+- Use a provider interface for AI:
+  interface AIProvider { complete(input: string, opts?: { signal?: AbortSignal; system?: string }): Promise<string>; }
+  Implement providers in /lib/ai (e.g., OpenAIProvider).
+
+## Chrome Extension specifics (MV3)
+- Use a background *service worker* (no long-lived DOM). Avoid setInterval loops; prefer alarms, events, and message passing.
+- Use `chrome.runtime.onMessage` for requests from content → background; respond with typed payloads.
+- Define permissions minimally; separate `permissions` from `host_permissions`.
+- Keep content scripts lean; do not block the page. Prefer message passing for heavy/AI work.
+- Never use `eval` or dynamic code generation. Respect MV3 CSP.
+- Add a version bump when changing manifest or permissions.
+
+## Security & privacy
+- Do not hardcode API keys. For local dev, use env files and inject at build-time; in production, prefer user-provided keys stored via `chrome.storage.session` or `chrome.storage.local` with minimal scopes.
+- Sanitize all DOM interactions; no innerHTML from untrusted input.
+- If scraping page content for AI, strip PII by default and allow user opt-in.
+- Log sensitive errors only locally (console) and never transmit without explicit consent.
+
+## Code style & quality
+- TypeScript strict mode ON. No `any` (except narrowly, with TODO to remove).
+- Functions ≤ 40 lines; extract helpers. Single responsibility where practical.
+- Prefer async/await. Always handle rejections; bubble typed errors via `Result<T, E>` or custom Error classes.
+- Lint & format: ESLint (typescript-eslint), Prettier, and a pre-commit hook (lint + typecheck).
+- All public functions and message contracts must be documented with JSDoc (types, errors).
+
+## Messaging contracts
+- Define shared message types in /types/messages.ts:
+  type Msg =
+    | { kind: "PING" }
+    | { kind: "RUN_AI"; input: string; context?: { url?: string } };
+  Background must respond with `{ ok: true, data } | { ok: false, error }`.
+- Keep messages forward-compatible (add new `kind` variants; never repurpose old ones).
+
+## AI usage guidelines
+- Keep provider-agnostic: the app calls AIProvider only. No UI component should import concrete SDKs.
+- Support streaming when provider allows; otherwise gracefully fall back.
+- Add a 10s default timeout to AI calls; allow cancel via AbortController.
+- Include a small, testable prompt builder in /lib/ai/prompt.ts with explicit inputs (task, constraints, examples).
+
+## Testing
+- Unit test prompt builders and AI provider adapters with mocked fetch.
+- Unit test message handlers (background) and DOM-safe content utilities.
+- Smoke test build artifacts load in Chrome with `--load-unpacked`.
+
+## Docs & DX
+- Each PR must include: (1) what changed, (2) why, (3) test notes, (4) if manifest/permissions changed.
+- When generating or editing code, show the diff mindset: keep changes minimal and explain assumptions in comments.
+
+## What to do / not do (for the AI)
+DO:
+- Create small, typed modules with clear names.
+- Add or update npm scripts if needed (build, dev, typecheck, lint, test).
+- Propose minimal permission sets and justify them in comments above manifest fields.
+
+DO NOT:
+- Add heavy dependencies without explaining tradeoffs and bundle impact.
+- Introduce background polling when events or alarms suffice.
+- Bypass TypeScript types to “make it work”.
+
+## Checklists
+
+### When editing manifest.json
+- [ ] MV3 fields: "manifest_version": 3, "name", "version", "action"/"options_page" as needed.
+- [ ] "background": { "service_worker": "background.js", "type": "module" } (or bundled path).
+- [ ] Minimal "permissions" and "host_permissions".
+- [ ] Content scripts list is exact; matches.
+- [ ] Version bumped if permissions change.
+
+### When adding an AI feature
+- [ ] Touch only /lib/ai and call through AIProvider.
+- [ ] Prompt builder has deterministic sections (task, constraints, examples).
+- [ ] Timeout + cancellation supported.
+- [ ] User can configure API key/provider; stored via chrome.storage with a clear label.
+
+## Example tasks for the assistant (how to respond)
+- “Generate a typed message router for background that handles PING and RUN_AI with structured responses.”
+- “Create a minimal OpenAI provider using fetch that reads an API key from chrome.storage and supports AbortSignal.”
+- “Scaffold Vite config for MV3 (background, content, popup) with TypeScript and alias @ -> /src.”
+
+## Project commands (assume Vite; adjust if Webpack)
+- npm run dev — build & watch to /dist; copy manifest from /public and rewrite paths.
+- npm run build — production build (minify, sourcemaps=false).
+- npm run typecheck — tsc --noEmit
+- npm run lint — eslint .
+- npm run test — vitest
+
+## Nice-to-haves (later)
+- Options page for provider/key settings.
+- Popup UI with status and quick actions.
+- i18n via chrome.i18n (keep en default).
+- Minimal telemetry toggle (off by default).
