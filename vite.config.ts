@@ -1,4 +1,4 @@
-import { defineConfig, type UserConfig } from 'vite';
+import { defineConfig, type UserConfig, loadEnv } from 'vite';
 import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'fs';
@@ -78,6 +78,7 @@ function chromeExtension() {
 
 export default defineConfig(({ mode }): UserConfig => {
   const isDev = mode === 'development';
+  const env = loadEnv(mode, process.cwd(), '');
   
   return {
     plugins: [

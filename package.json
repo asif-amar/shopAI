@@ -17,9 +17,12 @@
     "postbuild": "echo 'Build complete! Load the dist folder in Chrome extensions.'"
   },
   "dependencies": {
+    "@google/genai": "^1.14.0",
     "chrome-types": "^0.1.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.260",

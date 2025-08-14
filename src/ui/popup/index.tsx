@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Message, MessageResponse } from '@/types/messages';
 import '@/styles/global.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const Popup: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -154,7 +156,9 @@ const Popup: React.FC = () => {
               whiteSpace: 'pre-wrap',
             }}
           >
-            {response}
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {response}
+            </ReactMarkdown>
           </p>
         </div>
       )}
