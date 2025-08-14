@@ -453,9 +453,11 @@ class ContentScript {
 
     try {
       const response = await this.sendMessage({
-        kind: 'CHAT_MESSAGE',
-        productInfo: this.productInfo,
-        message: message
+        kind: 'RUN_AI',
+        input: message,
+        context: {
+          productInfo: this.productInfo
+        }
       });
 
       // Remove typing indicator

@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
-type AIProviderType = 'openai' | 'gemini';
-
-interface AIProviderConfig {
-  provider: AIProviderType;
+interface GeminiConfig {
   apiKey: string;
-  model: string;
-  organization?: string;
-  apiVersion?: string;
 }
 
 interface UserPreferences {
@@ -19,10 +13,8 @@ interface UserPreferences {
 }
 
 const Options: React.FC = () => {
-  const [aiConfig, setAiConfig] = useState<AIProviderConfig>({
-    provider: 'openai',
+  const [geminiConfig, setGeminiConfig] = useState<GeminiConfig>({
     apiKey: '',
-    model: 'gpt-3.5-turbo',
   });
 
   const [userPrefs, setUserPrefs] = useState<UserPreferences>({
@@ -41,12 +33,12 @@ const Options: React.FC = () => {
   const loadSettings = async () => {
     try {
       const result = await chrome.storage.local.get([
-        'aiProviderConfig',
+        'geminiConfig',
         'userPreferences',
       ]);
 
-      if (result.aiProviderConfig) {
-        setAiConfig(result.aiProviderConfig);
+      if (result.geminiConfig) {
+        setGeminiConfig(result.geminiConfig);
       }
 
       if (result.userPreferences) {
@@ -63,7 +55,7 @@ const Options: React.FC = () => {
 
     try {
       await chrome.storage.local.set({
-        aiProviderConfig: aiConfig,
+        geminiConfig: geminiConfig,
         userPreferences: userPrefs,
       });
 
@@ -76,47 +68,8 @@ const Options: React.FC = () => {
     }
   };
 
-  const handleAIConfigChange = (
-    field: keyof AIProviderConfig,
-    value: string
-  ) => {
-    setAiConfig(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleProviderChange = (provider: AIProviderType) => {
-    const defaultModels = {
-      openai: 'gpt-3.5-turbo',
-      gemini: 'gemini-2.5-flash-lite',
-    };
-
-    setAiConfig(prev => ({
-      ...prev,
-      provider,
-      model: defaultModels[provider],
-      // Clear provider-specific fields when switching
-      organization: provider === 'openai' ? prev.organization : undefined,
-      apiVersion: provider === 'gemini' ? 'v1beta' : undefined,
-    }));
-  };
-
-  const getAvailableModels = (): string[] => {
-    switch (aiConfig.provider) {
-      case 'gemini':
-        return [
-          'gemini-2.5-flash-lite',
-          'gemini-1.5-pro',
-          'gemini-1.5-flash',
-          'gemini-1.0-pro',
-        ];
-      case 'openai':
-      default:
-        return [
-          'gpt-4',
-          'gpt-4-turbo-preview',
-          'gpt-3.5-turbo',
-          'gpt-3.5-turbo-16k',
-        ];
-    }
+  const handleGeminiConfigChange = (value: string) => {
+    setGeminiConfig({ apiKey: value });
   };
 
   const handleUserPrefsChange = (field: keyof UserPreferences, value: any) => {
@@ -234,7 +187,7 @@ const Options: React.FC = () => {
           marginBottom: '40px',
         }}
       >
-        {/* AI Configuration */}
+        {/* Gemini Configuration */}
         <div
           style={{
             background: '#f8f9fa',
@@ -264,48 +217,13 @@ const Options: React.FC = () => {
                 color: '#333',
               }}
             >
-              AI Provider
-            </label>
-            <select
-              value={aiConfig.provider}
-              onChange={e =>
-                handleProviderChange(e.target.value as AIProviderType)
-              }
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-            >
-              <option value="openai">OpenAI (ChatGPT)</option>
-              <option value="gemini">Google Gemini</option>
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#333',
-              }}
-            >
-              {aiConfig.provider === 'gemini'
-                ? 'Gemini API Key *'
-                : 'OpenAI API Key *'}
+              Gemini API Key *
             </label>
             <input
               type="password"
-              value={aiConfig.apiKey}
-              onChange={e => handleAIConfigChange('apiKey', e.target.value)}
-              placeholder={
-                aiConfig.provider === 'gemini' ? 'AIzaSy...' : 'sk-...'
-              }
+              value={geminiConfig.apiKey}
+              onChange={e => handleGeminiConfigChange(e.target.value)}
+              placeholder="AIzaSy..."
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -316,108 +234,26 @@ const Options: React.FC = () => {
               }}
             />
             <small style={{ color: '#666', fontSize: '12px' }}>
-              {aiConfig.provider === 'gemini'
-                ? 'Get your key from Google AI Studio (ai.google.dev)'
-                : 'Get your key from OpenAI Platform (platform.openai.com)'}
+              Get your key from Google AI Studio (ai.google.dev)
             </small>
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label
+            <div
               style={{
-                display: 'block',
-                marginBottom: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#333',
-              }}
-            >
-              Model
-            </label>
-            <select
-              value={aiConfig.model}
-              onChange={e => handleAIConfigChange('model', e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
+                padding: '12px',
+                background: '#e3f2fd',
+                border: '1px solid #bbdefb',
                 borderRadius: '6px',
                 fontSize: '14px',
-                boxSizing: 'border-box',
+                color: '#1565c0',
               }}
             >
-              {getAvailableModels().map(model => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
+              <strong>Model:</strong> models/gemini-2.0-flash-exp
+              <br />
+              <small>Using the latest Gemini model for optimal performance</small>
+            </div>
           </div>
-
-          {aiConfig.provider === 'openai' && (
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#333',
-                }}
-              >
-                Organization ID (Optional)
-              </label>
-              <input
-                type="text"
-                value={aiConfig.organization || ''}
-                onChange={e =>
-                  handleAIConfigChange('organization', e.target.value)
-                }
-                placeholder="org-..."
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-          )}
-
-          {aiConfig.provider === 'gemini' && (
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#333',
-                }}
-              >
-                API Version
-              </label>
-              <select
-                value={aiConfig.apiVersion || 'v1beta'}
-                onChange={e =>
-                  handleAIConfigChange('apiVersion', e.target.value)
-                }
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="v1beta">v1beta (Latest)</option>
-                <option value="v1">v1 (Stable)</option>
-              </select>
-            </div>
-          )}
         </div>
 
         {/* User Preferences */}

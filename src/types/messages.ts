@@ -2,13 +2,7 @@
  * Shared message types for communication between content scripts and background
  */
 
-export type MessageKind = 
-  | "PING"
-  | "RUN_AI"
-  | "GET_PRODUCT_INFO"
-  | "ANALYZE_PRICE"
-  | "GET_RECOMMENDATIONS"
-  | "CHAT_MESSAGE";
+export type MessageKind = 'PING' | 'RUN_AI';
 
 export interface BaseMessage {
   kind: MessageKind;
@@ -16,11 +10,11 @@ export interface BaseMessage {
 }
 
 export interface PingMessage extends BaseMessage {
-  kind: "PING";
+  kind: 'PING';
 }
 
 export interface RunAIMessage extends BaseMessage {
-  kind: "RUN_AI";
+  kind: 'RUN_AI';
   input: string;
   context?: {
     url?: string;
@@ -28,37 +22,7 @@ export interface RunAIMessage extends BaseMessage {
   };
 }
 
-export interface GetProductInfoMessage extends BaseMessage {
-  kind: "GET_PRODUCT_INFO";
-  url: string;
-}
-
-export interface AnalyzePriceMessage extends BaseMessage {
-  kind: "ANALYZE_PRICE";
-  price: number;
-  currency: string;
-  productName: string;
-  url: string;
-}
-
-export interface GetRecommendationsMessage extends BaseMessage {
-  kind: "GET_RECOMMENDATIONS";
-  productInfo: ProductInfo;
-}
-
-export interface ChatMessage extends BaseMessage {
-  kind: "CHAT_MESSAGE";
-  productInfo: ProductInfo;
-  message: string;
-}
-
-export type Message = 
-  | PingMessage
-  | RunAIMessage
-  | GetProductInfoMessage
-  | AnalyzePriceMessage
-  | GetRecommendationsMessage
-  | ChatMessage;
+export type Message = PingMessage | RunAIMessage;
 
 export interface ProductInfo {
   name: string;
@@ -77,6 +41,6 @@ export interface AIResponse {
   suggestions?: string[];
 }
 
-export type MessageResponse<T = any> = 
+export type MessageResponse<T = any> =
   | { ok: true; data: T }
-  | { ok: false; error: string }; 
+  | { ok: false; error: string };

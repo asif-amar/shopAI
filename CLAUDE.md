@@ -52,7 +52,7 @@ npm run preview
 - **TypeScript** with strict mode enabled
 - **Vite** for building and development
 - **React** for UI components (popup and options pages)
-- **Provider-agnostic AI** through AIProvider interface
+- **Gemini AI** using Vercel AI SDK with models/gemini-2.0-flash-exp
 
 ### Entry Points
 - `src/background/index.ts` - Service worker (handles AI requests, message routing)
@@ -71,11 +71,10 @@ All communication between content scripts and background uses typed messages:
 - `GET_RECOMMENDATIONS` - Product recommendations
 - `CHAT_MESSAGE` - Conversational AI interface
 
-#### AI Provider System (`src/lib/ai/`)
-- `provider.ts` - Abstract AIProvider interface with base functionality
-- `openai-provider.ts` - OpenAI implementation with streaming support
-- Supports cancellation via AbortController, 10s timeout by default
-- Configuration stored in chrome.storage.local
+#### AI System
+- Uses Vercel AI SDK `generateText` function with Google Gemini provider
+- Model: `models/gemini-2.0-flash-exp`
+- Configuration stored in chrome.storage.local as `geminiConfig`
 
 #### Content Script Features
 - Automatic product detection on shopping pages (Amazon, eBay, Walmart, etc.)
@@ -92,7 +91,6 @@ src/
 │   ├── popup/     # Extension popup
 │   └── options/   # Settings page
 ├── lib/           # Shared utilities
-│   └── ai/        # AI provider implementations
 ├── types/         # TypeScript definitions
 └── styles/        # Global CSS
 ```
@@ -103,7 +101,7 @@ src/
 - TypeScript strict mode ON, no `any` types except with TODO
 - Functions ≤ 40 lines, single responsibility
 - All public functions documented with JSDoc
-- Provider-agnostic AI: only call through AIProvider interface
+- Uses Vercel AI SDK generateText with Gemini provider
 - Message contracts in `/types/messages.ts` - never repurpose existing message kinds
 - No hardcoded API keys - use chrome.storage for user configuration
 
@@ -122,12 +120,10 @@ After building, load unpacked extension:
 4. Click "Load unpacked" → select `dist` folder
 
 ### AI Configuration
-Users provide OpenAI API key through options page, stored via chrome.storage.local. Configuration format:
+Users provide Gemini API key through options page, stored via chrome.storage.local. Configuration format:
 ```typescript
 {
   apiKey: string;
-  model?: string;
-  organization?: string;
 }
 ```
 
@@ -135,7 +131,7 @@ Users provide OpenAI API key through options page, stored via chrome.storage.loc
 
 - Build artifacts go to `dist/` folder (never commit this)
 - Product detection currently enabled on all pages for testing (see content/index.ts:34)
-- AI features require valid OpenAI API key configuration
+- AI features require valid Gemini API key configuration
 - Bundle size targets: background <100KB, content <150KB, popup <200KB
 - Vite provides faster development builds and hot module replacement for UI components
 - Uses Vite for fast builds and development (as preferred in .cursorrules)
@@ -144,7 +140,7 @@ Users provide OpenAI API key through options page, stored via chrome.storage.loc
 
 ## Common Tasks
 
-When adding AI features: only touch `/lib/ai/` and call through AIProvider interface. Support timeout + cancellation.
+When adding AI features: use Vercel AI SDK's generateText directly in background script with Gemini provider.
 
 When editing manifest.json: ensure MV3 compliance, minimal permissions, version bump if permissions change. The vite config will automatically copy manifest.json to the dist folder.
 

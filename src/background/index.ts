@@ -1,318 +1,104 @@
+import { generateText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { Message, MessageResponse, AIResponse } from '@/types/messages';
-import { OpenAIProvider } from '@/lib/ai/openai-provider';
-import { GeminiProvider } from '@/lib/ai/gemini-provider';
-import { AIProvider } from '@/lib/ai/provider';
+import { buildSystemPrompt } from '@/lib/prompts';
 
-/**
- * Background service worker for shopAI extension
- * Handles AI requests and manages extension state
- */
+const MESSAGE_HANDLERS: Record<
+  string,
+  (message: Message) => Promise<MessageResponse>
+> = {
+  PING: handlePing,
+  RUN_AI: handleAIRequest,
+};
 
-class BackgroundService {
-  private aiProvider: AIProvider | null = null;
-  private isInitialized = false;
+let geminiApiKey: string | null = null;
+let isInitialized = false;
 
-  constructor() {
-    this.initialize();
+async function handleMessage(message: Message): Promise<MessageResponse> {
+  console.log('shopAI: Received message:', message.kind);
+
+  const handler = MESSAGE_HANDLERS[message.kind];
+  if (!handler) {
+    return { ok: false, error: `Unknown message kind: ${message.kind}` };
   }
 
-  private async initialize(): Promise<void> {
-    try {
-      // Load AI provider configuration from storage
-      const config = await this.loadAIProviderConfig();
-      if (config) {
-        this.aiProvider = this.createAIProvider(config);
-        this.isInitialized = true;
-        console.log(
-          `shopAI: Background service initialized with ${config.provider || 'OpenAI'} provider`
-        );
-      } else {
-        console.log(
-          'shopAI: No AI provider configured, some features will be disabled'
-        );
-      }
-    } catch (error) {
-      console.error('shopAI: Failed to initialize background service:', error);
-    }
+  return handler(message);
+}
 
-    // Set up message listeners
-    this.setupMessageListeners();
+async function handlePing(): Promise<
+  MessageResponse<{ status: string; initialized: boolean }>
+> {
+  return {
+    ok: true,
+    data: { status: 'ok', initialized: isInitialized },
+  };
+}
+
+async function handleAIRequest(
+  message: Message
+): Promise<MessageResponse<AIResponse>> {
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    return { ok: false, error: 'Gemini API key not configured' };
   }
 
-  private setupMessageListeners(): void {
-    chrome.runtime.onMessage.addListener(
-      (message: Message, sender, sendResponse) => {
-        this.handleMessage(message, sender)
-          .then(sendResponse)
-          .catch(error => {
-            console.error('shopAI: Message handling error:', error);
-            sendResponse({ ok: false, error: error.message });
-          });
+  const google = createGoogleGenerativeAI({ apiKey: apiKey });
 
-        return true; // Keep message channel open for async response
-      }
-    );
-  }
+  const runAIMessage = message as Extract<Message, { kind: 'RUN_AI' }>;
+  console.log('shopAI: Running AI request:', runAIMessage);
 
-  private async handleMessage(
-    message: Message,
-    _sender: chrome.runtime.MessageSender
-  ): Promise<MessageResponse> {
-    console.log('shopAI: Received message:', message.kind);
+  try {
+    const result = await generateText({
+      model: google('models/gemini-2.0-flash-exp'),
+      system: buildSystemPrompt(runAIMessage.context),
+      prompt: runAIMessage.input,
+      temperature: 0.7,
+    });
 
-    switch (message.kind) {
-      case 'PING':
-        return this.handlePing();
-
-      case 'RUN_AI':
-        return this.handleRunAI(message);
-
-      case 'GET_PRODUCT_INFO':
-        return this.handleGetProductInfo(message);
-
-      case 'ANALYZE_PRICE':
-        return this.handleAnalyzePrice(message);
-
-      case 'GET_RECOMMENDATIONS':
-        return this.handleGetRecommendations(message);
-
-      case 'CHAT_MESSAGE':
-        return this.handleChatMessage(message);
-
-      default:
-        return {
-          ok: false,
-          error: `Unknown message kind: ${(message as any).kind}`,
-        };
-    }
-  }
-
-  private async handlePing(): Promise<
-    MessageResponse<{ status: string; initialized: boolean }>
-  > {
     return {
       ok: true,
-      data: {
-        status: 'ok',
-        initialized: this.isInitialized,
-      },
+      data: { text: result.text, confidence: 0.8 },
     };
-  }
-
-  private async handleRunAI(
-    message: Extract<Message, { kind: 'RUN_AI' }>
-  ): Promise<MessageResponse<AIResponse>> {
-    if (!this.aiProvider) {
-      return { ok: false, error: 'AI provider not configured' };
-    }
-
-    try {
-      const response = await this.aiProvider.complete(message.input, {
-        system: this.getSystemPrompt(message.context),
-        temperature: 0.7,
-        maxTokens: 1000,
-      });
-
-      return {
-        ok: true,
-        data: {
-          text: response,
-          confidence: 0.8,
-        },
-      };
-    } catch (error) {
-      console.error('shopAI: AI request failed:', error);
-      return {
-        ok: false,
-        error: `AI request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
-    }
-  }
-
-  private async handleGetProductInfo(
-    message: Extract<Message, { kind: 'GET_PRODUCT_INFO' }>
-  ): Promise<MessageResponse<any>> {
-    // This would typically involve scraping the page or calling a product API
-    // For now, return a placeholder response
+  } catch (error) {
+    console.error('shopAI: AI request failed:', error);
     return {
-      ok: true,
-      data: {
-        message: 'Product info extraction not yet implemented',
-        url: message.url,
-      },
+      ok: false,
+      error: `AI request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
-  }
-
-  private async handleAnalyzePrice(
-    message: Extract<Message, { kind: 'ANALYZE_PRICE' }>
-  ): Promise<MessageResponse<AIResponse>> {
-    if (!this.aiProvider) {
-      return { ok: false, error: 'AI provider not configured' };
-    }
-
-    try {
-      const prompt = `Analyze the price of "${message.productName}" at ${message.price} ${message.currency}. 
-      Is this a good price? Provide insights on value for money and any recommendations.`;
-
-      const response = await this.aiProvider.complete(prompt, {
-        system:
-          'You are a shopping assistant that helps users make informed purchase decisions. Provide clear, actionable advice.',
-        temperature: 0.7,
-        maxTokens: 500,
-      });
-
-      return {
-        ok: true,
-        data: {
-          text: response,
-          confidence: 0.8,
-        },
-      };
-    } catch (error) {
-      console.error('shopAI: Price analysis failed:', error);
-      return {
-        ok: false,
-        error: `Price analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
-    }
-  }
-
-  private async handleGetRecommendations(
-    message: Extract<Message, { kind: 'GET_RECOMMENDATIONS' }>
-  ): Promise<MessageResponse<AIResponse>> {
-    if (!this.aiProvider) {
-      return { ok: false, error: 'AI provider not configured' };
-    }
-
-    try {
-      const prompt = `Based on this product: ${message.productInfo.name} at ${message.productInfo.price} ${message.productInfo.currency}, 
-      provide shopping recommendations. Consider alternatives, timing, and value.`;
-
-      const response = await this.aiProvider.complete(prompt, {
-        system:
-          'You are a shopping assistant that provides personalized recommendations based on product information and market knowledge.',
-        temperature: 0.7,
-        maxTokens: 800,
-      });
-
-      return {
-        ok: true,
-        data: {
-          text: response,
-          confidence: 0.8,
-          suggestions: this.extractSuggestions(response),
-        },
-      };
-    } catch (error) {
-      console.error('shopAI: Recommendations failed:', error);
-      return {
-        ok: false,
-        error: `Recommendations failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
-    }
-  }
-
-  private async handleChatMessage(
-    message: Extract<Message, { kind: 'CHAT_MESSAGE' }>
-  ): Promise<MessageResponse<AIResponse>> {
-    if (!this.aiProvider) {
-      return { ok: false, error: 'AI provider not configured' };
-    }
-
-    try {
-      const systemPrompt = `You are shopAI, a helpful shopping assistant. The user is currently viewing a product: ${message.productInfo.name} at ${message.productInfo.price} ${message.productInfo.currency}. 
-      
-      Provide helpful, conversational responses about shopping decisions, product comparisons, pricing advice, and general shopping guidance. 
-      Be friendly, informative, and focus on helping the user make the best purchase decision.`;
-
-      const response = await this.aiProvider.complete(message.message, {
-        system: systemPrompt,
-        temperature: 0.7,
-        maxTokens: 1000,
-      });
-
-      return {
-        ok: true,
-        data: {
-          text: response,
-          confidence: 0.8,
-        },
-      };
-    } catch (error) {
-      console.error('shopAI: Chat message failed:', error);
-      return {
-        ok: false,
-        error: `Chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
-    }
-  }
-
-  private getSystemPrompt(context?: {
-    url?: string;
-    productInfo?: any;
-  }): string {
-    let prompt =
-      'You are shopAI, a helpful shopping assistant that provides clear, actionable advice to help users make informed purchase decisions.';
-
-    if (context?.url) {
-      prompt += ` The user is currently on: ${context.url}`;
-    }
-
-    if (context?.productInfo) {
-      prompt += ` Product context: ${JSON.stringify(context.productInfo)}`;
-    }
-
-    prompt +=
-      ' Provide concise, helpful responses focused on value, quality, and user benefit.';
-
-    return prompt;
-  }
-
-  private extractSuggestions(response: string): string[] {
-    // Simple extraction of suggestions from AI response
-    const suggestions: string[] = [];
-    const lines = response.split('\n');
-
-    for (const line of lines) {
-      if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
-        suggestions.push(line.trim().substring(1).trim());
-      }
-    }
-
-    return suggestions.slice(0, 3); // Limit to 3 suggestions
-  }
-
-  private createAIProvider(config: any): AIProvider {
-    const providerType = config.provider || 'openai';
-
-    switch (providerType) {
-      case 'gemini':
-        return new GeminiProvider({
-          apiKey: config.apiKey,
-          model: config.model || 'gemini-2.5-flash-lite',
-          apiVersion: config.apiVersion || 'v1beta',
-        });
-
-      case 'openai':
-      default:
-        return new OpenAIProvider({
-          apiKey: config.apiKey,
-          model: config.model || 'gpt-3.5-turbo',
-          organization: config.organization,
-        });
-    }
-  }
-
-  private async loadAIProviderConfig(): Promise<any> {
-    try {
-      const result = await chrome.storage.local.get(['aiProviderConfig']);
-      return result.aiProviderConfig;
-    } catch (error) {
-      console.error('shopAI: Failed to load AI provider config:', error);
-      return null;
-    }
   }
 }
 
-// Initialize the background service
-new BackgroundService();
+async function getGeminiApiKey(): Promise<string | null> {
+  if (!geminiApiKey) {
+    const config = await loadGeminiConfig();
+    if (config?.apiKey) {
+      geminiApiKey = config.apiKey;
+      isInitialized = true;
+      console.log('shopAI: Initialized with Gemini API key');
+    }
+  }
+  return geminiApiKey;
+}
+
+async function loadGeminiConfig(): Promise<{ apiKey?: string } | null> {
+  try {
+    const result = await chrome.storage.local.get(['geminiConfig']);
+    return result.geminiConfig;
+  } catch (error) {
+    console.error('shopAI: Failed to load Gemini config:', error);
+    return null;
+  }
+}
+
+chrome.runtime.onMessage.addListener(
+  (message: Message, _sender, sendResponse) => {
+    handleMessage(message)
+      .then(sendResponse)
+      .catch(error => {
+        console.error('shopAI: Message handling error:', error);
+        sendResponse({ ok: false, error: error.message });
+      });
+
+    return true;
+  }
+);
