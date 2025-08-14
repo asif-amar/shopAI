@@ -1,7 +1,8 @@
-import { generateText } from 'ai';
+import { generateText, tool } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { Message, MessageResponse, AIResponse } from '@/types/messages';
 import { buildSystemPrompt } from '@/lib/prompts';
+import { z } from 'zod';
 
 const MESSAGE_HANDLERS: Record<
   string,
@@ -45,14 +46,46 @@ async function handleAIRequest(
   const google = createGoogleGenerativeAI({ apiKey: apiKey });
 
   const runAIMessage = message as Extract<Message, { kind: 'RUN_AI' }>;
-  console.log('shopAI: Running AI request:', runAIMessage);
 
   try {
     const result = await generateText({
-      model: google('models/gemini-2.0-flash-exp'),
+      model: google('models/gemini-2.5-flash-lite'),
       system: buildSystemPrompt(runAIMessage.context),
       prompt: runAIMessage.input,
-      temperature: 0.7,
+
+      // We need to add maxSteps so the tools returned args will be fed to the LLM, but it doesn't work for some reason
+      // maxSteps: 3, - why this doesn't work?
+      // Tools Example here: https://www.youtube.com/watch?v=kDlqpN1JyIw&ab_channel=AIEngineer
+      // tools: {
+      //   listProductsTool: tool({
+      //     description: 'Use this tool to list products in the store',
+      //     parameters: z.object({
+      //       message: z.string().describe('The message to get the products for'),
+      //     }),
+
+      //     execute: async ({ message }) => {
+      //       // Dummy results
+      //       return [
+      //         {
+      //           name: 'חלב',
+      //           price: 10,
+      //           currency: 'ILS',
+      //           url: 'https://example.com/product-1',
+      //           description: 'חלב 3%',
+      //           imageUrl: 'https://example.com/product-1.jpg',
+      //         },
+      //         {
+      //           name: 'לחם',
+      //           price: 20,
+      //           currency: 'ILS',
+      //           url: 'https://example.com/product-2',
+      //           description: 'לחם שיפון',
+      //           imageUrl: 'https://example.com/product-2.jpg',
+      //         },
+      //       ];
+      //     },
+      //   }),
+      // },
     });
 
     return {
