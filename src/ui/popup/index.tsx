@@ -23,7 +23,7 @@ const Popup: React.FC = () => {
   };
 
   const sendMessage = (message: Message): Promise<MessageResponse> => {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       chrome.runtime.sendMessage(message, (response: MessageResponse) => {
         resolve(response);
       });
@@ -41,7 +41,7 @@ const Popup: React.FC = () => {
       const result = await sendMessage({
         kind: 'RUN_AI',
         input: message,
-        context: { url: window.location.href }
+        context: { url: window.location.href },
       });
 
       if (result.ok) {
@@ -58,30 +58,50 @@ const Popup: React.FC = () => {
 
   return (
     <div className="extension-popup p-4">
-      <div className="d-flex align-center mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
-        <div className="d-flex align-center justify-center" style={{
-          width: '32px',
-          height: '32px',
-          background: 'var(--primary-gradient)',
-          borderRadius: '50%',
-          color: 'white',
-          fontWeight: 'bold',
-          marginRight: '12px'
-        }}>
+      <div
+        className="d-flex align-center mb-4 pb-3"
+        style={{ borderBottom: '1px solid var(--border-color)' }}
+      >
+        <div
+          className="d-flex align-center justify-center"
+          style={{
+            width: '32px',
+            height: '32px',
+            background: 'var(--primary-gradient)',
+            borderRadius: '50%',
+            color: 'white',
+            fontWeight: 'bold',
+            marginRight: '12px',
+          }}
+        >
           AI
         </div>
         <div>
-          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: '600',
+              color: 'var(--text-primary)',
+            }}
+          >
             shopAI Assistant
           </h1>
-          <div className="d-flex align-center" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: isConnected ? 'var(--success-color)' : 'var(--error-color)',
-              marginRight: '6px'
-            }} />
+          <div
+            className="d-flex align-center"
+            style={{ fontSize: '12px', color: 'var(--text-secondary)' }}
+          >
+            <div
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: isConnected
+                  ? 'var(--success-color)'
+                  : 'var(--error-color)',
+                marginRight: '6px',
+              }}
+            />
             {isConnected ? 'Connected' : 'Disconnected'}
           </div>
         </div>
@@ -91,7 +111,7 @@ const Popup: React.FC = () => {
         <div className="form-group">
           <textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={e => setMessage(e.target.value)}
             placeholder="Ask me about products, prices, or shopping advice..."
             className="form-input form-textarea"
             disabled={isLoading}
@@ -115,29 +135,39 @@ const Popup: React.FC = () => {
 
       {response && (
         <div className="card">
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+          <h3
+            style={{
+              margin: '0 0 12px 0',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: 'var(--text-primary)',
+            }}
+          >
             AI Response:
           </h3>
-          <p style={{
-            margin: 0,
-            fontSize: '14px',
-            lineHeight: '1.6',
-            color: 'var(--text-secondary)',
-            whiteSpace: 'pre-wrap'
-          }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: '14px',
+              lineHeight: '1.6',
+              color: 'var(--text-secondary)',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
             {response}
           </p>
         </div>
       )}
 
-      <div className="text-center mt-4 pt-3" style={{ 
-        borderTop: '1px solid var(--border-color)', 
-        fontSize: '12px', 
-        color: 'var(--text-muted)' 
-      }}>
-        <p className="mb-2">
-          shopAI helps you make better purchase decisions
-        </p>
+      <div
+        className="text-center mt-4 pt-3"
+        style={{
+          borderTop: '1px solid var(--border-color)',
+          fontSize: '12px',
+          color: 'var(--text-muted)',
+        }}
+      >
+        <p className="mb-2">shopAI helps you make better purchase decisions</p>
         <button
           onClick={() => chrome.runtime.openOptionsPage()}
           className="btn btn-secondary"
@@ -155,4 +185,4 @@ const container = document.getElementById('root');
 if (container) {
   const root = createRoot(container);
   root.render(<Popup />);
-} 
+}
