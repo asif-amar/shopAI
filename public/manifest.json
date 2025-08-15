@@ -11,8 +11,22 @@
   ],
   "host_permissions": [
     "https://api.openai.com/*",
-    "*://*.amazon.*/*",
-    "*://*.ebay.*/*",
+    "https://generativelanguage.googleapis.com/*",
+    "*://*.amazon.com/*",
+    "*://*.amazon.co.uk/*",
+    "*://*.amazon.ca/*",
+    "*://*.amazon.de/*",
+    "*://*.amazon.fr/*",
+    "*://*.amazon.it/*",
+    "*://*.amazon.es/*",
+    "*://*.amazon.co.jp/*",
+    "*://*.ebay.com/*",
+    "*://*.ebay.co.uk/*",
+    "*://*.ebay.ca/*",
+    "*://*.ebay.de/*",
+    "*://*.ebay.fr/*",
+    "*://*.ebay.it/*",
+    "*://*.ebay.es/*",
     "*://*.walmart.com/*",
     "*://*.bestbuy.com/*",
     "*://*.target.com/*",
@@ -27,8 +41,21 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.amazon.*/*",
-        "*://*.ebay.*/*",
+        "*://*.amazon.com/*",
+        "*://*.amazon.co.uk/*",
+        "*://*.amazon.ca/*",
+        "*://*.amazon.de/*",
+        "*://*.amazon.fr/*",
+        "*://*.amazon.it/*",
+        "*://*.amazon.es/*",
+        "*://*.amazon.co.jp/*",
+        "*://*.ebay.com/*",
+        "*://*.ebay.co.uk/*",
+        "*://*.ebay.ca/*",
+        "*://*.ebay.de/*",
+        "*://*.ebay.fr/*",
+        "*://*.ebay.it/*",
+        "*://*.ebay.es/*",
         "*://*.walmart.com/*",
         "*://*.bestbuy.com/*",
         "*://*.target.com/*",
@@ -78,8 +105,21 @@
     {
       "resources": ["icons/*"],
       "matches": [
-        "*://*.amazon.*/*",
-        "*://*.ebay.*/*",
+        "*://*.amazon.com/*",
+        "*://*.amazon.co.uk/*",
+        "*://*.amazon.ca/*",
+        "*://*.amazon.de/*",
+        "*://*.amazon.fr/*",
+        "*://*.amazon.it/*",
+        "*://*.amazon.es/*",
+        "*://*.amazon.co.jp/*",
+        "*://*.ebay.com/*",
+        "*://*.ebay.co.uk/*",
+        "*://*.ebay.ca/*",
+        "*://*.ebay.de/*",
+        "*://*.ebay.fr/*",
+        "*://*.ebay.it/*",
+        "*://*.ebay.es/*",
         "*://*.walmart.com/*",
         "*://*.bestbuy.com/*",
         "*://*.target.com/*",
@@ -110,6 +150,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com"
   }
 }
