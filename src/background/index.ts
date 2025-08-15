@@ -1,4 +1,4 @@
-import { generateText, tool } from 'ai';
+import { generateText, stepCountIs, tool } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { Message, MessageResponse, AIResponse } from '@/types/messages';
 import { buildSystemPrompt } from '@/lib/prompts';
@@ -52,40 +52,37 @@ async function handleAIRequest(
       model: google('models/gemini-2.5-flash-lite'),
       system: buildSystemPrompt(runAIMessage.context),
       prompt: runAIMessage.input,
+      stopWhen: stepCountIs(5),
+      tools: {
+        listProducts: tool<{ message: string }>({
+          description: 'Use this tool to list products in the store',
+          inputSchema: z.object({
+            message: z.string(), //.describe('The message to get the products for'),
+          }) as any,
+          execute: async ({ message }) => {
+            const products = [
+              {
+                name: 'חלב',
+                price: 10,
+                currency: 'ILS',
+                url: 'https://example.com/product-1',
+                description: 'חלב 3%',
+                imageUrl: 'https://example.com/product-1.jpg',
+              },
+              {
+                name: 'לחם',
+                price: 20,
+                currency: 'ILS',
+                url: 'https://example.com/product-2',
+                description: 'לחם שיפון',
+                imageUrl: 'https://example.com/product-2.jpg',
+              },
+            ];
 
-      // We need to add maxSteps so the tools returned args will be fed to the LLM, but it doesn't work for some reason
-      // maxSteps: 3, - why this doesn't work?
-      // Tools Example here: https://www.youtube.com/watch?v=kDlqpN1JyIw&ab_channel=AIEngineer
-      // tools: {
-      //   listProductsTool: tool({
-      //     description: 'Use this tool to list products in the store',
-      //     parameters: z.object({
-      //       message: z.string().describe('The message to get the products for'),
-      //     }),
-
-      //     execute: async ({ message }) => {
-      //       // Dummy results
-      //       return [
-      //         {
-      //           name: 'חלב',
-      //           price: 10,
-      //           currency: 'ILS',
-      //           url: 'https://example.com/product-1',
-      //           description: 'חלב 3%',
-      //           imageUrl: 'https://example.com/product-1.jpg',
-      //         },
-      //         {
-      //           name: 'לחם',
-      //           price: 20,
-      //           currency: 'ILS',
-      //           url: 'https://example.com/product-2',
-      //           description: 'לחם שיפון',
-      //           imageUrl: 'https://example.com/product-2.jpg',
-      //         },
-      //       ];
-      //     },
-      //   }),
-      // },
+            return products;
+          },
+        }),
+      },
     });
 
     return {
