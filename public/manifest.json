@@ -6,15 +6,18 @@
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "sidePanel"
   ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "action": {
-    "default_title": "shopAI Assistant",
-    "default_popup": "popup.html"
+    "default_title": "shopAI Assistant"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "options_ui": {
     "page": "options.html",
