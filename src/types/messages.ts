@@ -2,7 +2,7 @@
  * Shared message types for communication between content scripts and background
  */
 
-export type MessageKind = 'PING' | 'RUN_AI';
+export type MessageKind = 'PING';
 
 export interface BaseMessage {
   kind: MessageKind;
@@ -13,16 +13,7 @@ export interface PingMessage extends BaseMessage {
   kind: 'PING';
 }
 
-export interface RunAIMessage extends BaseMessage {
-  kind: 'RUN_AI';
-  input: string;
-  context?: {
-    url?: string;
-    productInfo?: ProductInfo;
-  };
-}
-
-export type Message = PingMessage | RunAIMessage;
+export type Message = PingMessage;
 
 export interface ProductInfo {
   name: string;
@@ -35,11 +26,6 @@ export interface ProductInfo {
   brand?: string;
 }
 
-export interface AIResponse {
-  text: string;
-  confidence?: number;
-  suggestions?: string[];
-}
 
 export type MessageResponse<T = any> =
   | { ok: true; data: T }

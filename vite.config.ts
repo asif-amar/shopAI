@@ -93,7 +93,6 @@ export default defineConfig(({ mode }): UserConfig => {
       rollupOptions: {
         input: {
           background: resolve(__dirname, 'src/background/index.ts'),
-          content: resolve(__dirname, 'src/content/index.ts'),
           popup: resolve(__dirname, 'src/ui/popup/index.tsx'),
           options: resolve(__dirname, 'src/ui/options/index.tsx'),
         },

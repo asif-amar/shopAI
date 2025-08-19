@@ -2,17 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Message, MessageResponse } from '@/types/messages';
 import '@/styles/global.css';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 const Popup: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [response, setResponse] = useState('');
+  const [currentUrl, setCurrentUrl] = useState('');
 
   useEffect(() => {
     checkConnection();
+    getCurrentTab();
   }, []);
 
   const checkConnection = async () => {
@@ -24,6 +21,17 @@ const Popup: React.FC = () => {
     }
   };
 
+  const getCurrentTab = async () => {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs[0]?.url) {
+        setCurrentUrl(tabs[0].url);
+      }
+    } catch (error) {
+      console.error('Failed to get current tab:', error);
+    }
+  };
+
   const sendMessage = (message: Message): Promise<MessageResponse> => {
     return new Promise(resolve => {
       chrome.runtime.sendMessage(message, (response: MessageResponse) => {
@@ -32,31 +40,6 @@ const Popup: React.FC = () => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-
-    setIsLoading(true);
-    setResponse('');
-
-    try {
-      const result = await sendMessage({
-        kind: 'RUN_AI',
-        input: message,
-        context: { url: window.location.href },
-      });
-
-      if (result.ok) {
-        setResponse(result.data.text);
-      } else {
-        setResponse(`Error: ${(result as any).error}`);
-      }
-    } catch (error) {
-      setResponse('Failed to get response');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="extension-popup p-4">
@@ -74,9 +57,10 @@ const Popup: React.FC = () => {
             color: 'white',
             fontWeight: 'bold',
             marginRight: '12px',
+            fontSize: '16px',
           }}
         >
-          AI
+          🛍️
         </div>
         <div>
           <h1
@@ -109,76 +93,57 @@ const Popup: React.FC = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mb-4">
-        <div className="form-group">
-          <textarea
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            placeholder="Ask me about products, prices, or shopping advice..."
-            className="form-input form-textarea"
-            disabled={isLoading}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={isLoading || !message.trim()}
-          className="btn w-100"
-        >
-          {isLoading ? (
-            <>
-              <div className="spinner mr-2" />
-              Analyzing...
-            </>
-          ) : (
-            'Get AI Advice'
-          )}
-        </button>
-      </form>
+      <div className="mb-4">
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
+          Current Page
+        </h3>
+        <p style={{ 
+          margin: 0, 
+          fontSize: '12px', 
+          color: 'var(--text-secondary)',
+          wordBreak: 'break-all'
+        }}>
+          {currentUrl || 'No URL detected'}
+        </p>
+      </div>
 
-      {response && (
-        <div className="card">
-          <h3
-            style={{
-              margin: '0 0 12px 0',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'var(--text-primary)',
-            }}
-          >
-            AI Response:
-          </h3>
-          <p
-            style={{
-              margin: 0,
-              fontSize: '14px',
-              lineHeight: '1.6',
-              color: 'var(--text-secondary)',
-              whiteSpace: 'pre-wrap',
-            }}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {response}
-            </ReactMarkdown>
-          </p>
-        </div>
-      )}
+      <div className="card mb-4">
+        <h3
+          style={{
+            margin: '0 0 12px 0',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: 'var(--text-primary)',
+          }}
+        >
+          shopAI Extension
+        </h3>
+        <p style={{ 
+          margin: '0 0 12px 0', 
+          fontSize: '14px', 
+          color: 'var(--text-secondary)',
+          lineHeight: '1.4'
+        }}>
+          Your shopping assistant extension is ready. Configure your preferences in settings.
+        </p>
+        <button
+          onClick={() => chrome.runtime.openOptionsPage()}
+          className="btn w-100"
+          style={{ fontSize: '14px', padding: '10px' }}
+        >
+          ⚙️ Open Settings
+        </button>
+      </div>
 
       <div
-        className="text-center mt-4 pt-3"
+        className="text-center pt-3"
         style={{
           borderTop: '1px solid var(--border-color)',
           fontSize: '12px',
           color: 'var(--text-muted)',
         }}
       >
-        <p className="mb-2">shopAI helps you make better purchase decisions</p>
-        <button
-          onClick={() => chrome.runtime.openOptionsPage()}
-          className="btn btn-secondary"
-          style={{ fontSize: '12px', padding: '6px 12px' }}
-        >
-          Settings
-        </button>
+        <p className="mb-0">shopAI helps you make better purchase decisions</p>
       </div>
     </div>
   );
