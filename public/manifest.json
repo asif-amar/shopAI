@@ -2,94 +2,23 @@
   "manifest_version": 3,
   "name": "shopAI",
   "version": "1.0.0",
-  "description": "AI-powered shopping assistant that helps you make better purchase decisions",
+  "description": "Shopping assistant that helps you make better purchase decisions",
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://api.openai.com/*",
-    "https://generativelanguage.googleapis.com/*",
-    "*://*.amazon.com/*",
-    "*://*.amazon.co.uk/*",
-    "*://*.amazon.ca/*",
-    "*://*.amazon.de/*",
-    "*://*.amazon.fr/*",
-    "*://*.amazon.it/*",
-    "*://*.amazon.es/*",
-    "*://*.amazon.co.jp/*",
-    "*://*.ebay.com/*",
-    "*://*.ebay.co.uk/*",
-    "*://*.ebay.ca/*",
-    "*://*.ebay.de/*",
-    "*://*.ebay.fr/*",
-    "*://*.ebay.it/*",
-    "*://*.ebay.es/*",
-    "*://*.walmart.com/*",
-    "*://*.bestbuy.com/*",
-    "*://*.target.com/*",
-    "*://*.newegg.com/*",
-    "*://*.etsy.com/*",
-    "*://*.shopify.com/*"
+    "tabs",
+    "sidePanel"
   ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.amazon.com/*",
-        "*://*.amazon.co.uk/*",
-        "*://*.amazon.ca/*",
-        "*://*.amazon.de/*",
-        "*://*.amazon.fr/*",
-        "*://*.amazon.it/*",
-        "*://*.amazon.es/*",
-        "*://*.amazon.co.jp/*",
-        "*://*.ebay.com/*",
-        "*://*.ebay.co.uk/*",
-        "*://*.ebay.ca/*",
-        "*://*.ebay.de/*",
-        "*://*.ebay.fr/*",
-        "*://*.ebay.it/*",
-        "*://*.ebay.es/*",
-        "*://*.walmart.com/*",
-        "*://*.bestbuy.com/*",
-        "*://*.target.com/*",
-        "*://*.newegg.com/*",
-        "*://*.etsy.com/*",
-        "*://*.shopify.com/*",
-        "*://*.ksp.co.il/*",
-        "*://*.ivory.co.il/*",
-        "*://*.bug.co.il/*",
-        "*://*.wallashops.co.il/*",
-        "*://*.p1000.co.il/*",
-        "*://*.lastprice.co.il/*",
-        "*://*.zap.co.il/*",
-        "*://*.shufersal.co.il/*",
-        "*://*.ramilevy.co.il/*",
-        "*://*.victoryonline.co.il/*",
-        "*://*.victory.co.il/*",
-        "*://*.tivtaam.co.il/*",
-        "*://*.super-pharm.co.il/*",
-        "*://*.terminalx.com/*",
-        "*://*.castro.com/*",
-        "*://*.fox.co.il/*",
-        "*://*.golfco.co.il/*",
-        "*://*.ikea.co.il/*",
-        "*://*.ace.co.il/*",
-        "*://*.azrieli.com/*"
-      ],
-      "js": ["content.js"],
-      "run_at": "document_end"
-    }
-  ],
   "action": {
-    "default_title": "shopAI Assistant",
-    "default_popup": "popup.html"
+    "default_title": "shopAI Assistant"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "options_ui": {
     "page": "options.html",
@@ -101,55 +30,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "web_accessible_resources": [
-    {
-      "resources": ["icons/*"],
-      "matches": [
-        "*://*.amazon.com/*",
-        "*://*.amazon.co.uk/*",
-        "*://*.amazon.ca/*",
-        "*://*.amazon.de/*",
-        "*://*.amazon.fr/*",
-        "*://*.amazon.it/*",
-        "*://*.amazon.es/*",
-        "*://*.amazon.co.jp/*",
-        "*://*.ebay.com/*",
-        "*://*.ebay.co.uk/*",
-        "*://*.ebay.ca/*",
-        "*://*.ebay.de/*",
-        "*://*.ebay.fr/*",
-        "*://*.ebay.it/*",
-        "*://*.ebay.es/*",
-        "*://*.walmart.com/*",
-        "*://*.bestbuy.com/*",
-        "*://*.target.com/*",
-        "*://*.newegg.com/*",
-        "*://*.etsy.com/*",
-        "*://*.shopify.com/*",
-        "*://*.ksp.co.il/*",
-        "*://*.ivory.co.il/*",
-        "*://*.bug.co.il/*",
-        "*://*.wallashops.co.il/*",
-        "*://*.p1000.co.il/*",
-        "*://*.lastprice.co.il/*",
-        "*://*.zap.co.il/*",
-        "*://*.shufersal.co.il/*",
-        "*://*.ramilevy.co.il/*",
-        "*://*.victoryonline.co.il/*",
-        "*://*.victory.co.il/*",
-        "*://*.tivtaam.co.il/*",
-        "*://*.super-pharm.co.il/*",
-        "*://*.terminalx.com/*",
-        "*://*.castro.com/*",
-        "*://*.fox.co.il/*",
-        "*://*.golfco.co.il/*",
-        "*://*.ikea.co.il/*",
-        "*://*.ace.co.il/*",
-        "*://*.azrieli.com/*"
-      ]
-    }
-  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self'"
   }
 }

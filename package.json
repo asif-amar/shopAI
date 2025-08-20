@@ -1,7 +1,7 @@
 {
   "name": "shopai-extension",
   "version": "1.0.0",
-  "description": "AI-powered shopping assistant Chrome extension",
+  "description": "Shopping assistant Chrome extension",
   "type": "module",
   "scripts": {
     "dev": "vite build --watch --mode development",
@@ -17,14 +17,9 @@
     "postbuild": "echo 'Build complete! Load the dist folder in Chrome extensions.'"
   },
   "dependencies": {
-    "@ai-sdk/google": "^2.0.6",
-    "ai": "^5.0.14",
     "chrome-types": "^0.1.0",
-    "dedent": "^1.6.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.260",
@@ -42,13 +37,13 @@
     "prettier": "^3.0.0",
     "rimraf": "^5.0.1",
     "sharp": "^0.34.3",
+    "terser": "^5.43.1",
     "typescript": "^5.1.6",
     "vite": "^4.4.0",
     "vitest": "^0.34.0"
   },
   "keywords": [
     "chrome-extension",
-    "ai",
     "shopping",
     "typescript",
     "manifest-v3",

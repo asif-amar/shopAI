@@ -70,7 +70,7 @@ function chromeExtension() {
       }
 
       // Process HTML files
-      processHtmlFile('popup.html', distDir, publicDir);
+      processHtmlFile('sidepanel.html', distDir, publicDir);
       processHtmlFile('options.html', distDir, publicDir);
     },
   };
@@ -93,9 +93,9 @@ export default defineConfig(({ mode }): UserConfig => {
       rollupOptions: {
         input: {
           background: resolve(__dirname, 'src/background/index.ts'),
-          content: resolve(__dirname, 'src/content/index.ts'),
-          popup: resolve(__dirname, 'src/ui/popup/index.tsx'),
+          sidepanel: resolve(__dirname, 'src/ui/sidepanel/index.tsx'),
           options: resolve(__dirname, 'src/ui/options/index.tsx'),
+          chatStorage: resolve(__dirname, 'src/utils/chatStorage.ts'),
         },
         output: {
           entryFileNames: '[name].js',

@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
-interface GeminiConfig {
-  apiKey: string;
-}
-
 interface UserPreferences {
   budget?: number;
   priorities: string[];
@@ -13,10 +9,6 @@ interface UserPreferences {
 }
 
 const Options: React.FC = () => {
-  const [geminiConfig, setGeminiConfig] = useState<GeminiConfig>({
-    apiKey: '',
-  });
-
   const [userPrefs, setUserPrefs] = useState<UserPreferences>({
     priorities: [],
     preferredBrands: [],
@@ -32,14 +24,7 @@ const Options: React.FC = () => {
 
   const loadSettings = async () => {
     try {
-      const result = await chrome.storage.local.get([
-        'geminiConfig',
-        'userPreferences',
-      ]);
-
-      if (result.geminiConfig) {
-        setGeminiConfig(result.geminiConfig);
-      }
+      const result = await chrome.storage.local.get(['userPreferences']);
 
       if (result.userPreferences) {
         setUserPrefs(result.userPreferences);
@@ -55,7 +40,6 @@ const Options: React.FC = () => {
 
     try {
       await chrome.storage.local.set({
-        geminiConfig: geminiConfig,
         userPreferences: userPrefs,
       });
 
@@ -66,10 +50,6 @@ const Options: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGeminiConfigChange = (value: string) => {
-    setGeminiConfig({ apiKey: value });
   };
 
   const handleUserPrefsChange = (field: keyof UserPreferences, value: any) => {
@@ -141,7 +121,7 @@ const Options: React.FC = () => {
             margin: '0 auto 16px',
           }}
         >
-          AI
+          🛍️
         </div>
         <h1
           style={{
@@ -160,7 +140,7 @@ const Options: React.FC = () => {
             color: '#666',
           }}
         >
-          Configure your AI assistant and preferences
+          Configure your shopping assistant preferences
         </p>
       </div>
 
@@ -181,268 +161,190 @@ const Options: React.FC = () => {
 
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '40px',
+          background: '#f8f9fa',
+          padding: '24px',
+          borderRadius: '12px',
+          border: '1px solid #e9ecef',
           marginBottom: '40px',
         }}
       >
-        {/* Gemini Configuration */}
-        <div
+        <h2
           style={{
-            background: '#f8f9fa',
-            padding: '24px',
-            borderRadius: '12px',
-            border: '1px solid #e9ecef',
+            margin: '0 0 20px 0',
+            fontSize: '20px',
+            fontWeight: '600',
+            color: '#333',
           }}
         >
-          <h2
+          Shopping Preferences
+        </h2>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label
             style={{
-              margin: '0 0 20px 0',
-              fontSize: '20px',
-              fontWeight: '600',
+              display: 'block',
+              marginBottom: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
               color: '#333',
             }}
           >
-            AI Configuration
-          </h2>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#333',
-              }}
-            >
-              Gemini API Key *
-            </label>
-            <input
-              type="password"
-              value={geminiConfig.apiKey}
-              onChange={e => handleGeminiConfigChange(e.target.value)}
-              placeholder="AIzaSy..."
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-            />
-            <small style={{ color: '#666', fontSize: '12px' }}>
-              Get your key from Google AI Studio (ai.google.dev)
-            </small>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <div
-              style={{
-                padding: '12px',
-                background: '#e3f2fd',
-                border: '1px solid #bbdefb',
-                borderRadius: '6px',
-                fontSize: '14px',
-                color: '#1565c0',
-              }}
-            >
-              <strong>Model:</strong> models/gemini-2.0-flash-exp
-              <br />
-              <small>Using the latest Gemini model for optimal performance</small>
-            </div>
-          </div>
+            Monthly Budget (Optional)
+          </label>
+          <input
+            type="number"
+            value={userPrefs.budget || ''}
+            onChange={e =>
+              handleUserPrefsChange(
+                'budget',
+                e.target.value ? Number(e.target.value) : undefined
+              )
+            }
+            placeholder="1000"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '14px',
+              boxSizing: 'border-box',
+            }}
+          />
         </div>
 
-        {/* User Preferences */}
-        <div
-          style={{
-            background: '#f8f9fa',
-            padding: '24px',
-            borderRadius: '12px',
-            border: '1px solid #e9ecef',
-          }}
-        >
-          <h2
+        <div style={{ marginBottom: '16px' }}>
+          <label
             style={{
-              margin: '0 0 20px 0',
-              fontSize: '20px',
-              fontWeight: '600',
+              display: 'block',
+              marginBottom: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
               color: '#333',
             }}
           >
-            Shopping Preferences
-          </h2>
+            Shopping Priorities
+          </label>
+          <div style={{ marginBottom: '8px' }}>
+            {userPrefs.priorities.map((priority, index) => (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '4px',
+                }}
+              >
+                <span style={{ flex: 1, fontSize: '14px' }}>{priority}</span>
+                <button
+                  onClick={() => removePriority(index)}
+                  style={{
+                    background: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={addPriority}
+            style={{
+              background: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              cursor: 'pointer',
+            }}
+          >
+            Add Priority
+          </button>
+        </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#333',
-              }}
-            >
-              Monthly Budget (Optional)
-            </label>
+        <div style={{ marginBottom: '16px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#333',
+            }}
+          >
+            Preferred Brands
+          </label>
+          <div style={{ marginBottom: '8px' }}>
+            {userPrefs.preferredBrands.map((brand, index) => (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '4px',
+                }}
+              >
+                <span style={{ flex: 1, fontSize: '14px' }}>{brand}</span>
+                <button
+                  onClick={() => removeBrand(index)}
+                  style={{
+                    background: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={addBrand}
+            style={{
+              background: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              cursor: 'pointer',
+            }}
+          >
+            Add Brand
+          </button>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#333',
+              cursor: 'pointer',
+            }}
+          >
             <input
-              type="number"
-              value={userPrefs.budget || ''}
+              type="checkbox"
+              checked={userPrefs.enableNotifications}
               onChange={e =>
-                handleUserPrefsChange(
-                  'budget',
-                  e.target.value ? Number(e.target.value) : undefined
-                )
+                handleUserPrefsChange('enableNotifications', e.target.checked)
               }
-              placeholder="1000"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
+              style={{ marginRight: '8px' }}
             />
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#333',
-              }}
-            >
-              Shopping Priorities
-            </label>
-            <div style={{ marginBottom: '8px' }}>
-              {userPrefs.priorities.map((priority, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '4px',
-                  }}
-                >
-                  <span style={{ flex: 1, fontSize: '14px' }}>{priority}</span>
-                  <button
-                    onClick={() => removePriority(index)}
-                    style={{
-                      background: '#dc3545',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={addPriority}
-              style={{
-                background: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >
-              Add Priority
-            </button>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#333',
-              }}
-            >
-              Preferred Brands
-            </label>
-            <div style={{ marginBottom: '8px' }}>
-              {userPrefs.preferredBrands.map((brand, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '4px',
-                  }}
-                >
-                  <span style={{ flex: 1, fontSize: '14px' }}>{brand}</span>
-                  <button
-                    onClick={() => removeBrand(index)}
-                    style={{
-                      background: '#dc3545',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={addBrand}
-              style={{
-                background: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >
-              Add Brand
-            </button>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#333',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={userPrefs.enableNotifications}
-                onChange={e =>
-                  handleUserPrefsChange('enableNotifications', e.target.checked)
-                }
-                style={{ marginRight: '8px' }}
-              />
-              Enable notifications
-            </label>
-          </div>
+            Enable notifications
+          </label>
         </div>
       </div>
 
