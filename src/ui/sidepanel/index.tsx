@@ -1,14 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@/styles/global.css';
-import ChatStorageManager, { ChatMessage } from '@/utils/chatStorage';
+
+interface ChatMessage {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+}
 
 const SidePanel: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentHost, setCurrentHost] = useState<string>('');
-  const [isInitialized, setIsInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -19,46 +23,9 @@ const SidePanel: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Initialize chat when component mounts
-  useEffect(() => {
-    initializeChat();
-  }, []);
-
-  // Listen for tab changes to update host
-  useEffect(() => {
-    const handleTabUpdate = () => {
-      initializeChat();
-    };
-
-    // Listen for tab activation
-    chrome.tabs.onActivated.addListener(handleTabUpdate);
-    chrome.tabs.onUpdated.addListener(handleTabUpdate);
-
-    return () => {
-      chrome.tabs.onActivated.removeListener(handleTabUpdate);
-      chrome.tabs.onUpdated.removeListener(handleTabUpdate);
-    };
-  }, []);
-
-  const initializeChat = async () => {
-    try {
-      const host = await ChatStorageManager.getCurrentHost();
-      setCurrentHost(host);
-      
-      // Load existing conversation for this host
-      const existingMessages = await ChatStorageManager.loadConversation(host);
-      setMessages(existingMessages);
-      setIsInitialized(true);
-    } catch (error) {
-      console.error('Failed to initialize chat:', error);
-      setCurrentHost('unknown-host');
-      setIsInitialized(true);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || isLoading || !currentHost) return;
+    if (!inputText.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -67,39 +34,20 @@ const SidePanel: React.FC = () => {
       timestamp: new Date()
     };
 
-    // Add user message to state and storage
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsLoading(true);
 
-    // Save user message to storage
-    try {
-      await ChatStorageManager.addMessage(currentHost, userMessage);
-    } catch (error) {
-      console.error('Failed to save user message:', error);
-    }
-
-    // Simulate processing delay and bot response
-    setTimeout(async () => {
+    setTimeout(() => {
       const botResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        text: 'Unavailable right now',
+        text: 'Hello! This is a basic chat interface. Ready to be enhanced!',
         isUser: false,
         timestamp: new Date()
       };
 
-      // Add bot response to state and storage
-      const finalMessages = [...updatedMessages, botResponse];
-      setMessages(finalMessages);
+      setMessages(prev => [...prev, botResponse]);
       setIsLoading(false);
-
-      // Save bot response to storage
-      try {
-        await ChatStorageManager.addMessage(currentHost, botResponse);
-      } catch (error) {
-        console.error('Failed to save bot response:', error);
-      }
     }, 1000);
   };
 
@@ -114,42 +62,11 @@ const SidePanel: React.FC = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const clearCurrentConversation = async () => {
-    if (!currentHost || !confirm('Are you sure you want to clear this conversation?')) return;
-    
-    try {
-      await ChatStorageManager.clearConversation(currentHost);
-      // Reload the conversation (will get default welcome message)
-      await initializeChat();
-    } catch (error) {
-      console.error('Failed to clear conversation:', error);
+  const clearConversation = () => {
+    if (confirm('Are you sure you want to clear this conversation?')) {
+      setMessages([]);
     }
   };
-
-  const getDisplayHost = (host: string) => {
-    if (host === 'unknown-host') return 'Extension';
-    if (host.startsWith('www.')) return host.substring(4);
-    return host;
-  };
-
-  // Show loading state while initializing
-  if (!isInitialized) {
-    return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f8f9fa',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>🛍️</div>
-          <div style={{ color: '#666' }}>Loading chat...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{
@@ -186,18 +103,18 @@ const SidePanel: React.FC = () => {
               fontSize: '18px',
               fontWeight: '600'
             }}>
-              shopAI Assistant
+              shopAI Chat
             </h1>
             <p style={{
               margin: '2px 0 0 0',
               fontSize: '12px',
               opacity: 0.8
             }}>
-              {getDisplayHost(currentHost)}
+              Basic Chat Interface
             </p>
           </div>
           <button
-            onClick={clearCurrentConversation}
+            onClick={clearConversation}
             style={{
               background: 'rgba(255,255,255,0.2)',
               border: 'none',

@@ -95,7 +95,6 @@ export default defineConfig(({ mode }): UserConfig => {
           background: resolve(__dirname, 'src/background/index.ts'),
           sidepanel: resolve(__dirname, 'src/ui/sidepanel/index.tsx'),
           options: resolve(__dirname, 'src/ui/options/index.tsx'),
-          chatStorage: resolve(__dirname, 'src/utils/chatStorage.ts'),
         },
         output: {
           entryFileNames: '[name].js',
