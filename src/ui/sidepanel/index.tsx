@@ -1,23 +1,79 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@/styles/global.css';
+import { Message } from '@/types/storage';
 
-interface ChatMessage {
-  id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-}
+interface ChatMessage extends Message {}
 
 const SidePanel: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentHostname, setCurrentHostname] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Load conversation when component mounts or hostname changes
+  const loadConversation = async (hostname: string) => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_CONVERSATION',
+        data: { hostname }
+      });
+      
+      if (response.conversation) {
+        const conversationMessages = response.conversation.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+        setMessages(conversationMessages);
+      } else {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      setMessages([]);
+    }
+  };
+
+  // Get current hostname and load conversation
+  const initializeConversation = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_CURRENT_HOSTNAME'
+      });
+      
+      if (response.hostname) {
+        setCurrentHostname(response.hostname);
+        await loadConversation(response.hostname);
+      }
+    } catch (error) {
+      console.error('Failed to get current hostname:', error);
+    }
+  };
+
+  // Listen for hostname changes from background script
+  useEffect(() => {
+    const handleMessage = (message: any) => {
+      if (message.type === 'HOSTNAME_CHANGED') {
+        const newHostname = message.data.hostname;
+        setCurrentHostname(newHostname);
+        loadConversation(newHostname);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(handleMessage);
+    
+    // Initialize on mount
+    initializeConversation();
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleMessage);
+    };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -25,36 +81,64 @@ const SidePanel: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || isLoading) return;
+    if (!inputText.trim() || isLoading || !currentHostname) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       text: inputText.trim(),
       isUser: true,
       timestamp: new Date()
     };
 
+    // Add message to UI immediately
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsLoading(true);
 
-    setTimeout(() => {
+    // Save user message to storage
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SAVE_MESSAGE',
+        data: {
+          hostname: currentHostname,
+          message: userMessage
+        }
+      });
+    } catch (error) {
+      console.error('Failed to save user message:', error);
+    }
+
+    // Simulate bot response (replace with actual AI integration later)
+    setTimeout(async () => {
       const botResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: 'Hello! This is a basic chat interface. Ready to be enhanced!',
+        id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+        text: `Hello! I'm chatting on ${currentHostname}. This conversation will be saved and restored when you return to this site!`,
         isUser: false,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, botResponse]);
       setIsLoading(false);
+
+      // Save bot response to storage
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'SAVE_MESSAGE',
+          data: {
+            hostname: currentHostname,
+            message: botResponse
+          }
+        });
+      } catch (error) {
+        console.error('Failed to save bot message:', error);
+      }
     }, 1000);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit(e as any);
     }
   };
 
@@ -62,9 +146,21 @@ const SidePanel: React.FC = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const clearConversation = () => {
+  const clearConversation = async () => {
     if (confirm('Are you sure you want to clear this conversation?')) {
       setMessages([]);
+      
+      // Clear conversation in storage
+      if (currentHostname) {
+        try {
+          await chrome.runtime.sendMessage({
+            type: 'CLEAR_CONVERSATION',
+            data: { hostname: currentHostname }
+          });
+        } catch (error) {
+          console.error('Failed to clear conversation:', error);
+        }
+      }
     }
   };
 
@@ -110,7 +206,7 @@ const SidePanel: React.FC = () => {
               fontSize: '12px',
               opacity: 0.8
             }}>
-              Basic Chat Interface
+              {currentHostname || 'Loading...'}
             </p>
           </div>
           <button
@@ -272,7 +368,7 @@ const SidePanel: React.FC = () => {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             disabled={isLoading}
             style={{
