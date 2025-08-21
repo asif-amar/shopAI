@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import '@/styles/global.css';
 import { Message } from '@/types/storage';
 
+import { experimental_createMCPClient, generateText, stepCountIs } from 'ai';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+
 interface ChatMessage extends Message {}
 
 const SidePanel: React.FC = () => {
@@ -21,14 +25,16 @@ const SidePanel: React.FC = () => {
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'GET_CONVERSATION',
-        data: { hostname }
+        data: { hostname },
       });
-      
+
       if (response.conversation) {
-        const conversationMessages = response.conversation.messages.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
+        const conversationMessages = response.conversation.messages.map(
+          (msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          })
+        );
         setMessages(conversationMessages);
       } else {
         setMessages([]);
@@ -43,9 +49,9 @@ const SidePanel: React.FC = () => {
   const initializeConversation = async () => {
     try {
       const response = await chrome.runtime.sendMessage({
-        type: 'GET_CURRENT_HOSTNAME'
+        type: 'GET_CURRENT_HOSTNAME',
       });
-      
+
       if (response.hostname) {
         setCurrentHostname(response.hostname);
         await loadConversation(response.hostname);
@@ -66,7 +72,7 @@ const SidePanel: React.FC = () => {
     };
 
     chrome.runtime.onMessage.addListener(handleMessage);
-    
+
     // Initialize on mount
     initializeConversation();
 
@@ -87,7 +93,7 @@ const SidePanel: React.FC = () => {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       text: inputText.trim(),
       isUser: true,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // Add message to UI immediately
@@ -101,38 +107,64 @@ const SidePanel: React.FC = () => {
         type: 'SAVE_MESSAGE',
         data: {
           hostname: currentHostname,
-          message: userMessage
-        }
+          message: userMessage,
+        },
       });
     } catch (error) {
       console.error('Failed to save user message:', error);
     }
 
-    // Simulate bot response (replace with actual AI integration later)
-    setTimeout(async () => {
-      const botResponse: ChatMessage = {
-        id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-        text: `Hello! I'm chatting on ${currentHostname}. This conversation will be saved and restored when you return to this site!`,
-        isUser: false,
-        timestamp: new Date()
-      };
+    const httpTransport = new StreamableHTTPClientTransport(
+      new URL('http://localhost:8787/mcp')
+    );
 
-      setMessages(prev => [...prev, botResponse]);
-      setIsLoading(false);
+    const mcpClient = await experimental_createMCPClient({
+      transport: httpTransport,
+    });
 
-      // Save bot response to storage
-      try {
-        await chrome.runtime.sendMessage({
-          type: 'SAVE_MESSAGE',
-          data: {
-            hostname: currentHostname,
-            message: botResponse
-          }
-        });
-      } catch (error) {
-        console.error('Failed to save bot message:', error);
-      }
-    }, 1000);
+    const tools = await mcpClient.tools();
+
+    const google = createGoogleGenerativeAI({
+      apiKey: 'GEMINI_API_KEY_HERE',
+    });
+
+    const response = await generateText({
+      model: google('gemini-2.0-flash-exp'),
+      tools,
+      stopWhen: stepCountIs(5),
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: inputText.trim() }],
+        },
+      ],
+    });
+
+    const assistantResponse = response.text;
+
+    const botMessage: ChatMessage = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+      text: assistantResponse,
+      isUser: false,
+      timestamp: new Date(),
+    };
+
+    // Add bot message to UI immediately
+    setMessages(prev => [...prev, botMessage]);
+    setIsLoading(false);
+
+    // Save bot message to storage
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SAVE_MESSAGE',
+        data: {
+          hostname: currentHostname,
+          message: botMessage,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to save bot message:', error);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -149,13 +181,13 @@ const SidePanel: React.FC = () => {
   const clearConversation = async () => {
     if (confirm('Are you sure you want to clear this conversation?')) {
       setMessages([]);
-      
+
       // Clear conversation in storage
       if (currentHostname) {
         try {
           await chrome.runtime.sendMessage({
             type: 'CLEAR_CONVERSATION',
-            data: { hostname: currentHostname }
+            data: { hostname: currentHostname },
           });
         } catch (error) {
           console.error('Failed to clear conversation:', error);
@@ -165,47 +197,58 @@ const SidePanel: React.FC = () => {
   };
 
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#f8f9fa',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
+    <div
+      style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#f8f9fa',
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
       {/* Header */}
-      <div style={{
-        padding: '16px 20px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        borderBottom: '1px solid #e9ecef',
-        flexShrink: 0
-      }}>
+      <div
+        style={{
+          padding: '16px 20px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          borderBottom: '1px solid #e9ecef',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '16px'
-          }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+            }}
+          >
             🛍️
           </div>
           <div style={{ flex: 1 }}>
-            <h1 style={{
-              margin: 0,
-              fontSize: '18px',
-              fontWeight: '600'
-            }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: '600',
+              }}
+            >
               shopAI Chat
             </h1>
-            <p style={{
-              margin: '2px 0 0 0',
-              fontSize: '12px',
-              opacity: 0.8
-            }}>
+            <p
+              style={{
+                margin: '2px 0 0 0',
+                fontSize: '12px',
+                opacity: 0.8,
+              }}
+            >
               {currentHostname || 'Loading...'}
             </p>
           </div>
@@ -219,10 +262,14 @@ const SidePanel: React.FC = () => {
               padding: '6px 8px',
               fontSize: '12px',
               cursor: 'pointer',
-              transition: 'background-color 0.2s ease'
+              transition: 'background-color 0.2s ease',
             }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'}
+            onMouseOver={e =>
+              (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)')
+            }
+            onMouseOut={e =>
+              (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)')
+            }
             title="Clear conversation"
           >
             Clear
@@ -231,125 +278,149 @@ const SidePanel: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        {messages.map((message) => (
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+        }}
+      >
+        {messages.map(message => (
           <div
             key={message.id}
             style={{
               display: 'flex',
               flexDirection: message.isUser ? 'row-reverse' : 'row',
               alignItems: 'flex-start',
-              gap: '8px'
+              gap: '8px',
             }}
           >
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: message.isUser 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                : '#e9ecef',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px',
-              flexShrink: 0
-            }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: message.isUser
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : '#e9ecef',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                flexShrink: 0,
+              }}
+            >
               {message.isUser ? '👤' : '🤖'}
             </div>
-            
-            <div style={{
-              maxWidth: '70%',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <div style={{
-                background: message.isUser ? '#667eea' : 'white',
-                color: message.isUser ? 'white' : '#333',
-                padding: '12px 16px',
-                borderRadius: message.isUser 
-                  ? '18px 18px 4px 18px'
-                  : '18px 18px 18px 4px',
-                fontSize: '14px',
-                lineHeight: '1.4',
-                border: message.isUser ? 'none' : '1px solid #e9ecef',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}>
+
+            <div
+              style={{
+                maxWidth: '70%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}
+            >
+              <div
+                style={{
+                  background: message.isUser ? '#667eea' : 'white',
+                  color: message.isUser ? 'white' : '#333',
+                  padding: '12px 16px',
+                  borderRadius: message.isUser
+                    ? '18px 18px 4px 18px'
+                    : '18px 18px 18px 4px',
+                  fontSize: '14px',
+                  lineHeight: '1.4',
+                  border: message.isUser ? 'none' : '1px solid #e9ecef',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}
+              >
                 {message.text}
               </div>
-              <div style={{
-                fontSize: '11px',
-                color: '#6c757d',
-                textAlign: message.isUser ? 'right' : 'left',
-                paddingLeft: message.isUser ? '0' : '4px',
-                paddingRight: message.isUser ? '4px' : '0'
-              }}>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: '#6c757d',
+                  textAlign: message.isUser ? 'right' : 'left',
+                  paddingLeft: message.isUser ? '0' : '4px',
+                  paddingRight: message.isUser ? '4px' : '0',
+                }}
+              >
                 {formatTime(message.timestamp)}
               </div>
             </div>
           </div>
         ))}
-        
+
         {isLoading && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '8px'
-          }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: '#e9ecef',
+          <div
+            style={{
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px',
-              flexShrink: 0
-            }}>
+              alignItems: 'flex-start',
+              gap: '8px',
+            }}
+          >
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: '#e9ecef',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                flexShrink: 0,
+              }}
+            >
               🤖
             </div>
-            <div style={{
-              background: 'white',
-              padding: '12px 16px',
-              borderRadius: '18px 18px 18px 4px',
-              border: '1px solid #e9ecef',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}>
-              <div style={{
-                display: 'flex',
-                gap: '4px',
-                alignItems: 'center'
-              }}>
-                <div style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#6c757d',
-                  animation: 'pulse 1.4s infinite ease-in-out'
-                }} />
-                <div style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#6c757d',
-                  animation: 'pulse 1.4s infinite ease-in-out 0.2s'
-                }} />
-                <div style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#6c757d',
-                  animation: 'pulse 1.4s infinite ease-in-out 0.4s'
-                }} />
+            <div
+              style={{
+                background: 'white',
+                padding: '12px 16px',
+                borderRadius: '18px 18px 18px 4px',
+                border: '1px solid #e9ecef',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '4px',
+                  alignItems: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#6c757d',
+                    animation: 'pulse 1.4s infinite ease-in-out',
+                  }}
+                />
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#6c757d',
+                    animation: 'pulse 1.4s infinite ease-in-out 0.2s',
+                  }}
+                />
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#6c757d',
+                    animation: 'pulse 1.4s infinite ease-in-out 0.4s',
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -358,16 +429,18 @@ const SidePanel: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div style={{
-        padding: '16px 20px',
-        background: 'white',
-        borderTop: '1px solid #e9ecef',
-        flexShrink: 0
-      }}>
+      <div
+        style={{
+          padding: '16px 20px',
+          background: 'white',
+          borderTop: '1px solid #e9ecef',
+          flexShrink: 0,
+        }}
+      >
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px' }}>
           <textarea
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
+            onChange={e => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             disabled={isLoading}
@@ -383,10 +456,10 @@ const SidePanel: React.FC = () => {
               resize: 'none',
               outline: 'none',
               transition: 'border-color 0.2s ease',
-              background: isLoading ? '#f8f9fa' : 'white'
+              background: isLoading ? '#f8f9fa' : 'white',
             }}
-            onFocus={(e) => e.target.style.borderColor = '#667eea'}
-            onBlur={(e) => e.target.style.borderColor = '#e9ecef'}
+            onFocus={e => (e.target.style.borderColor = '#667eea')}
+            onBlur={e => (e.target.style.borderColor = '#e9ecef')}
           />
           <button
             type="submit"
@@ -396,17 +469,19 @@ const SidePanel: React.FC = () => {
               height: '40px',
               borderRadius: '50%',
               border: 'none',
-              background: (!inputText.trim() || isLoading) 
-                ? '#e9ecef' 
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background:
+                !inputText.trim() || isLoading
+                  ? '#e9ecef'
+                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
-              cursor: (!inputText.trim() || isLoading) ? 'not-allowed' : 'pointer',
+              cursor:
+                !inputText.trim() || isLoading ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '16px',
               transition: 'all 0.2s ease',
-              flexShrink: 0
+              flexShrink: 0,
             }}
           >
             {isLoading ? '⏳' : '➤'}
