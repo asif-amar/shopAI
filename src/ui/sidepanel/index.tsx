@@ -125,7 +125,7 @@ const SidePanel: React.FC = () => {
     const tools = await mcpClient.tools();
 
     const google = createGoogleGenerativeAI({
-      apiKey: 'GEMINI_API_KEY_HERE',
+      apiKey: 'AIzaSyAIXUQLMeXMefTYdOZuIZGA8DPw9ligsJU',
     });
 
     const response = await generateText({
